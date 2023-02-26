@@ -6,16 +6,12 @@ set(INCLUDE_DIRECTORY src/include)
 set(SOURCES
         src/c/main.c
         src/include/vault.h
-        src/c/vault.c
-        src/include/io.h
-        src/c/io.c
         src/include/types.h
-        src/c/cmds/init.c
-        src/include/cmds/init.h
-        src/include/cmds/add.h
-        src/include/cmds/cp.h
-        src/c/cmds/add.c src/c/cmds/cp.c
-        test/iotest.c src/include/util.h src/c/vlt.c)
+        src/include/util.h
+        src/include/io.h
+        src/c/vlt.c
+        src/c/io.c
+        src/c/util.c)
 
 add_executable(Pwm ${SOURCES})
 
