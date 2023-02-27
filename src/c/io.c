@@ -11,7 +11,7 @@ void freadpw(char* password, size_t n) {
     static struct termios ogt;
     static struct termios newt;
 
-    // get settings of actual/current terminal
+    // get settings of current terminal
     tcgetattr(STDIN_FILENO, &ogt);
 
     // turn off echo

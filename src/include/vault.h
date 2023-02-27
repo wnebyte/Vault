@@ -14,7 +14,7 @@ typedef struct Vault {
 
 extern Vault vltinit(const char* path);
 
-extern void vltadd(const Vault*, const char* name, const char* pw);
+extern bool vltadd(const Vault*, const char* name);
 
 extern void vltget(const Vault*, const char* name, char* pw);
 

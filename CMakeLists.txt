@@ -11,7 +11,7 @@ set(SOURCES
         src/include/io.h
         src/c/vlt.c
         src/c/io.c
-        src/c/util.c)
+        src/c/util.c src/include/assert.h)
 
 add_executable(Vault ${SOURCES})
 

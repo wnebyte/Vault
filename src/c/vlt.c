@@ -15,6 +15,7 @@
 #define MASTER_DIR_NAME "_master"
 #define NUM_PROTECTED_NAMES (1u)
 #define VAULT_KEY (250lu)
+#define HASH_MAX_LENGTH (200u)
 
 /*
  * Typedefs.
@@ -26,18 +27,18 @@ typedef void(*Cleanup)(void);
 /*
  * Local variables.
  */
-static const char* protectedNames[NUM_PROTECTED_NAMES]={MASTER_DIR_NAME };
+static const char* protectednames[NUM_PROTECTED_NAMES] = {MASTER_DIR_NAME};
 
 /*
  * Local function declarations.
  */
-static bool isnameprotected(const char* name);
+static bool isprot(const char* name);
 static uint64_t keygen();
 static const char* hash(const char* data, size_t n);
 static void fdump(const char* filename, const char* modes, const char* data, const Cleanup cleanupcb);
 static void fundump(const char* filename,const char* modes, char* data, size_t n, const Cleanup cleanupcb);
-static void newtf(Vault *vlt, const char *vpath);
-static void loadff(Vault*, const char*);
+static void newtf(Vault*);
+static void loadff(Vault*);
 
 /*
  * Global function declarations.
@@ -47,10 +48,10 @@ Vault vltinit(const char*);
 /*
  * Local function definitions.
  */
-static bool isnameprotected(const char* name) {
+static bool isprot(const char* name) {
     uint32_t i;
     for (i = 0; i < NUM_PROTECTED_NAMES; ++i) {
-        if (strcmp(name, protectedNames[i]) == 0) {
+        if (strcmp(name, protectednames[i]) == 0) {
             return TRUE;
         }
     }
@@ -91,22 +92,15 @@ static void fundump(const char* filename, const char* modes, char* data, size_t 
     fclose(fptr);
 }
 
-static void newtf(Vault* vlt, const char* vpath) {
-    // create new top-level directory
-    if (fmkdir(vpath) == FALSE) {
-        EXIT("Could not create dir: '%s'\n", vpath);
+static void newtf(Vault* vlt) {
+    // create top-level/root directory
+    if (fmkdir(vlt->path) == FALSE) {
+        EXIT("Could not create dir: '%s'\n", vlt->path);
     }
-
-    // read master-password, and generate key
-    fprintf(stdout, "Select a Master Password: ");
-    char masterpassword[PASSWORD_MAX_LENGTH];
-    freadpw(masterpassword, PASSWORD_MAX_LENGTH);
-    fprintf(stdout, "\n");
-    uint64_t masterkey = keygen();
 
     // create _master dir path
     char masterpath[PATH_MAX_LENGTH];
-    topath(masterpath, vpath, 1, MASTER_DIR_NAME);
+    topath(masterpath, vlt->path, 1, MASTER_DIR_NAME);
 
     // create _master dir
     if (fmkdir(masterpath) == FALSE) {
@@ -118,95 +112,161 @@ static void newtf(Vault* vlt, const char* vpath) {
     char masterpasswordpath[PATH_MAX_LENGTH];
     topath(masterpasswordpath, masterpath, 1, "password.txt");
 
+    // read master-password
+    char masterpassword[PASSWORD_MAX_LENGTH];
+    fprintf(stdout, "Select a Master Password: ");
+    freadpw(masterpassword, PASSWORD_MAX_LENGTH);
+    fprintf(stdout, "\n");
+
+    // hash and write _master-password to file (tmp unencrypted)
+    const char* masterpasswordhash = hash(masterpassword, HASH_MAX_LENGTH);
+    fdump(masterpasswordpath, "w", masterpasswordhash, NULL);
+
     // create _master-key path
     char masterkeypath[PATH_MAX_LENGTH];
     topath(masterkeypath, masterpath, 1, "key.txt");
 
-    // hash and write _master-password to file (tmp unencrypted)
-    const char* masterpasswordhash = hash(masterpassword, PATH_MAX_LENGTH);
-    fdump(masterpasswordpath, "w", masterpasswordhash, NULL);
+    // generate master-key
+    uint64_t masterkey = keygen();
 
     // write _master-key to file (tmp unencrypted)
     char str[256];
     sprintf(str, "%zu", masterkey);
     fdump(masterkeypath, "w", str, NULL);
 
-    // update vault struct data members
-    strcpy(vlt->path, vpath);
+    // update vault struct
     vlt->key = VAULT_KEY;
     strcpy(vlt->masterpasswordhash, masterpasswordhash);
     vlt->masterkey = masterkey;
 }
 
-static void loadff(Vault* vlt, const char* path) {
-    // create vault dir path
-    char vpath[PATH_MAX_LENGTH];
-    strcpy(vpath, path);
-
+static void loadff(Vault* vlt) {
     // create _master dir path
     char masterpath[PATH_MAX_LENGTH];
-    topath(masterpath, vpath, 1, MASTER_DIR_NAME);
+    topath(masterpath, vlt->path, 1, MASTER_DIR_NAME);
 
     // check that _master dir exists
     if (fisdir(masterpath) == FALSE) {
-        EXIT("Directory: '%s' does not exists.\n", masterpath);
+        EXIT("Directory: '%s' does not exists\n", masterpath);
     }
 
     // create _master-password path
     char masterpasswordpath[PATH_MAX_LENGTH];
     topath(masterpasswordpath, masterpath, 1, "password.txt");
 
+    // check that _master-password exists
+    if (fexists(masterpasswordpath) == FALSE) {
+        EXIT("File: '%s' does not exists\n", masterpasswordpath);
+    }
+
+    // read master-password from file
+    char masterpasswordhash[HASH_MAX_LENGTH];
+    fundump(masterpasswordpath, "r", masterpasswordhash, HASH_MAX_LENGTH, NULL);
+
     // create _master-key path
     char masterkeypath[PATH_MAX_LENGTH];
     topath(masterkeypath, masterpath, 1, "key.txt");
 
-    // check that _master-password exists
-    if (fexists(masterpasswordpath) == FALSE) {
-        EXIT("File: '%s' does not exists.\n", masterpasswordpath);
-    }
-
     // check that _master-key exists
     if (fexists(masterkeypath) == FALSE) {
-        EXIT("File: '%s' does not exist.\n", masterkeypath);
+        EXIT("File: '%s' does not exist\n", masterkeypath);
     }
-
-    // read master-password from file
-    char masterpasswordhash[PASSWORD_MAX_LENGTH];
-    fundump(masterpasswordpath, "r", masterpasswordhash, PASSWORD_MAX_LENGTH, NULL);
 
     // read master-key from file
     char str[256];
     fundump(masterkeypath, "r", str, 256, NULL);
     uint64_t masterkey = (uint64_t)atoll(str);
 
-    // update vault struct data members
-    strcpy(vlt->path, vpath);
+    // update vault struct
     vlt->key = VAULT_KEY;
     strcpy(vlt->masterpasswordhash, masterpasswordhash);
     vlt->masterkey = masterkey;
 }
 
-
 /*
  * Global function definitions.
  */
 Vault vltinit(const char* path) {
+    // create vault and vault dir path
     Vault vlt;
-    // create cwd path
-    char cwd[PATH_MAX_LENGTH];
-    strcpy(cwd, path);
+    char root[PATH_MAX_LENGTH];
+    topath(root, path, 1, VAULT_DIR_NAME);
+    strcpy(vlt.path, root);
 
-    // create vault dir path
-    char vpath[PATH_MAX_LENGTH];
-    topath(vpath, cwd, 1, VAULT_DIR_NAME);
-
-    if (fexists(vpath) == TRUE) {
+    if (fexists(root) == TRUE) {
         // vault already exists
-        loadff(&vlt, vpath);
+        loadff(&vlt);
     } else {
         // new vault should be created
-        newtf(&vlt, vpath);
+        newtf(&vlt);
     }
 
     return vlt;
+}
+
+bool vltadd(const Vault* vault, const char* name) {
+    // check precondition
+    uint32_t i;
+    for (i = 0; i < NUM_PROTECTED_NAMES; ++i) {
+        if (strcmp(name, protectednames[i]) == 0) {
+            EXIT("Name: '%s' is protected\n", name);
+        }
+    }
+
+    // create name dir path
+    char namepath[PATH_MAX_LENGTH];
+    topath(namepath, vault->path, 1, name);
+
+    // check if name dir already exists
+    if (fexists(namepath) == TRUE) {
+        fprintf(stdout, "Entry for name: '%s' already exists\n", name);
+        return FALSE;
+    }
+
+    // create name dir
+    if (fmkdir(namepath) == FALSE) {
+        EXIT("Could not create dir: '%s'\n", namepath);
+    }
+
+    /*
+     * 1. specify password
+     * 2. auth using master-password
+     */
+
+    // read password, and generate hash & key
+    char password[PASSWORD_MAX_LENGTH];
+    fprintf(stdout, "Password: ");
+    freadpw(password, PASSWORD_MAX_LENGTH);
+    fprintf(stdout, "\n");
+    const char* passwordhash = hash(password, HASH_MAX_LENGTH);
+    uint64_t key = keygen();
+
+    // read master-password
+    char masterpassword[PASSWORD_MAX_LENGTH];
+    fprintf(stdout, "Master-Password: ");
+    freadpw(masterpassword, PASSWORD_MAX_LENGTH);
+    fprintf(stdout, "\n");
+    const char* masterpasswordhash = hash(masterpassword, HASH_MAX_LENGTH);
+
+    if (strcmp(vault->masterpasswordhash, masterpasswordhash) != 0) {
+        EXIT("Could not authenticate using Master-Password\n", NULL);
+    }
+
+    // create password path
+    char passwordpath[PATH_MAX_LENGTH];
+    topath(passwordpath, namepath, 1, "password.txt");
+
+    // write password to file
+    fdump(passwordpath, "w", passwordhash, NULL);
+
+    // create key path
+    char keypath[PATH_MAX_LENGTH];
+    topath(keypath, namepath, 1, "key.txt");
+
+    // write key to file
+    char str[256];
+    sprintf(str, "%zu", key);
+    fdump(keypath, "w", str, NULL);
+
+    return TRUE;
 }
