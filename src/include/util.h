@@ -1,5 +1,5 @@
-#ifndef PWM_UTIL_H
-#define PWM_UTIL_H
+#ifndef VAULT_UTIL_H
+#define VAULT_UTIL_H
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,6 +15,6 @@
 #define EXIT(format, ...) do { fprintf(stderr, format, __VA_ARGS__); exit(EXIT_FAILURE); } while (0)
 #define GET_CWD(cwd, n) (getcwd(cwd, n) != NULL)
 
-extern void pathify(char* path, const char* authority, size_t n, ...);
+extern void topath(char* path, const char* authority, size_t n, ...);
 
-#endif //PWM_UTIL_H
+#endif //VAULT_UTIL_H

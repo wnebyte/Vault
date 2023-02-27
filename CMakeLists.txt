@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(Pwm C)
+project(Vault C)
 
 set(CMAKE_C_STANDARD 99)
 set(INCLUDE_DIRECTORY src/include)
@@ -13,9 +13,9 @@ set(SOURCES
         src/c/io.c
         src/c/util.c)
 
-add_executable(Pwm ${SOURCES})
+add_executable(Vault ${SOURCES})
 
-target_include_directories(Pwm PRIVATE ${INCLUDE_DIRECTORY})
+target_include_directories(Vault PRIVATE ${INCLUDE_DIRECTORY})
 
 add_compile_definitions(_WINDOWS)
 add_compile_definitions(_LINUX)

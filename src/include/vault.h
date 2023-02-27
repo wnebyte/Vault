@@ -1,5 +1,5 @@
-#ifndef PWM_VAULT_H
-#define PWM_VAULT_H
+#ifndef VAULT_VAULT_H
+#define VAULT_VAULT_H
 
 #include "types.h"
 
@@ -20,4 +20,4 @@ extern void vltget(const Vault*, const char* name, char* pw);
 
 extern void vltcp(const Vault*, const char* name);
 
-#endif //PWM_VAULT_H
+#endif //VAULT_VAULT_H

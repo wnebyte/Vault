@@ -1,5 +1,5 @@
-#ifndef PWM_IO_H
-#define PWM_IO_H
+#ifndef VAULT_IO_H
+#define VAULT_IO_H
 
 #include <bits/types/FILE.h>
 #include "types.h"
@@ -14,4 +14,4 @@ extern bool fisdir(const char* path);
 
 extern bool fmkdir(const char* path);
 
-#endif //PWM_IO_H
+#endif //VAULT_IO_H

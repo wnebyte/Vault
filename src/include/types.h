@@ -1,5 +1,5 @@
-#ifndef PWM_TYPES_H
-#define PWM_TYPES_H
+#ifndef VAULT_TYPES_H
+#define VAULT_TYPES_H
 
 #define bool _Bool
 #define TRUE 1
@@ -14,4 +14,4 @@ typedef unsigned short uint16_t;
 typedef unsigned int uint, uint32_t;
 typedef unsigned long uint64_t;
 
-#endif //PWM_TYPES_H
+#endif //VAULT_TYPES_H

@@ -106,7 +106,7 @@ static void newtf(Vault* vlt, const char* vpath) {
 
     // create _master dir path
     char masterpath[PATH_MAX_LENGTH];
-    pathify(masterpath, vpath, 1, MASTER_DIR_NAME);
+    topath(masterpath, vpath, 1, MASTER_DIR_NAME);
 
     // create _master dir
     if (fmkdir(masterpath) == FALSE) {
@@ -116,11 +116,11 @@ static void newtf(Vault* vlt, const char* vpath) {
 
     // create _master-password path
     char masterpasswordpath[PATH_MAX_LENGTH];
-    pathify(masterpasswordpath, masterpath, 1, "password.txt");
+    topath(masterpasswordpath, masterpath, 1, "password.txt");
 
     // create _master-key path
     char masterkeypath[PATH_MAX_LENGTH];
-    pathify(masterkeypath, masterpath, 1, "key.txt");
+    topath(masterkeypath, masterpath, 1, "key.txt");
 
     // hash and write _master-password to file (tmp unencrypted)
     const char* masterpasswordhash = hash(masterpassword, PATH_MAX_LENGTH);
@@ -145,7 +145,7 @@ static void loadff(Vault* vlt, const char* path) {
 
     // create _master dir path
     char masterpath[PATH_MAX_LENGTH];
-    pathify(masterpath, vpath, 1, MASTER_DIR_NAME);
+    topath(masterpath, vpath, 1, MASTER_DIR_NAME);
 
     // check that _master dir exists
     if (fisdir(masterpath) == FALSE) {
@@ -154,11 +154,11 @@ static void loadff(Vault* vlt, const char* path) {
 
     // create _master-password path
     char masterpasswordpath[PATH_MAX_LENGTH];
-    pathify(masterpasswordpath, masterpath, 1, "password.txt");
+    topath(masterpasswordpath, masterpath, 1, "password.txt");
 
     // create _master-key path
     char masterkeypath[PATH_MAX_LENGTH];
-    pathify(masterkeypath, masterpath, 1, "key.txt");
+    topath(masterkeypath, masterpath, 1, "key.txt");
 
     // check that _master-password exists
     if (fexists(masterpasswordpath) == FALSE) {
@@ -198,7 +198,7 @@ Vault vltinit(const char* path) {
 
     // create vault dir path
     char vpath[PATH_MAX_LENGTH];
-    pathify(vpath, cwd, 1, VAULT_DIR_NAME);
+    topath(vpath, cwd, 1, VAULT_DIR_NAME);
 
     if (fexists(vpath) == TRUE) {
         // vault already exists

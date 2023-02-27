@@ -2,7 +2,7 @@
 #include <string.h>
 #include "util.h"
 
-void pathify(char* path, const char* authority, size_t n, ...) {
+void topath(char* path, const char* authority, size_t n, ...) {
     va_list ap;
     char* arg;
     strcpy(path, authority);
