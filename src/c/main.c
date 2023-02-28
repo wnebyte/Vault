@@ -4,8 +4,10 @@
 
 #define VLT_PATH "/home/wne/dev/c/Vault"
 
+static Vault vlt;
+
 int main(int argc, char *argv[]) {
-    Vault vlt = vltinit(VLT_PATH);
+    vltinit(&vlt, VLT_PATH);
     vltadd(&vlt, "unix");
     return EXIT_SUCCESS;
 }

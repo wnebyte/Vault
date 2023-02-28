@@ -12,7 +12,7 @@ typedef struct Vault {
     uint64_t masterkey;
 } Vault;
 
-extern Vault vltinit(const char* path);
+extern void vltinit(Vault*, const char* path);
 
 extern bool vltadd(const Vault*, const char* name);
 

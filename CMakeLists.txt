@@ -9,9 +9,10 @@ set(SOURCES
         src/include/types.h
         src/include/util.h
         src/include/io.h
-        src/c/vlt.c
+        src/include/assert.h
+        src/c/vault.c
         src/c/io.c
-        src/c/util.c src/include/assert.h)
+        src/c/util.c)
 
 add_executable(Vault ${SOURCES})
 

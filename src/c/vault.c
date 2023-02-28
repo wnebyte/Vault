@@ -1,5 +1,6 @@
-/*
- * Includes.
+/*************************************************************
+ * Includes
+ *************************************************************
  */
 #include <stdio.h>
 #include <string.h>
@@ -8,45 +9,56 @@
 #include "types.h"
 #include "util.h"
 
-/*
- * Definitions.
+/*************************************************************
+ * Definitions
+ *************************************************************
  */
-#define VAULT_DIR_NAME "vault"
-#define MASTER_DIR_NAME "_master"
+#define VAULT_DIR_NAME      "vault"
+#define MASTER_DIR_NAME     "_master"
+#define PASSWORD_FILE_NAME  "password.txt"
+#define KEY_FILE_NAME       "key.txt"
+#define WRITE_MODE          "w"
+#define READ_MODE           "r"
 #define NUM_PROTECTED_NAMES (1u)
-#define VAULT_KEY (250lu)
-#define HASH_MAX_LENGTH (200u)
+#define VAULT_KEY           (250lu)
+#define HASH_MAX_LENGTH     (200lu)
 
-/*
- * Typedefs.
+/*************************************************************
+ * Typedefs
+ *************************************************************
  */
-typedef char*(*Encryption)(const char*, size_t n, size_t key);
-typedef char*(*Decryption)(const char*, size_t n, size_t key);
-typedef void(*Cleanup)(void);
+typedef char* Encryption(const char*, size_t, sbyte*, size_t);
+typedef char* Decryption(const sbyte*, size_t, char*, size_t);
+typedef void Cleanup(void);
 
-/*
- * Local variables.
+/*************************************************************
+ * Local variables
+ *************************************************************
  */
 static const char* protectednames[NUM_PROTECTED_NAMES] = {MASTER_DIR_NAME};
 
-/*
- * Local function declarations.
+/*************************************************************
+ * Local function declarations
+ *************************************************************
  */
 static bool isprot(const char* name);
 static uint64_t keygen();
-static const char* hash(const char* data, size_t n);
-static void fdump(const char* filename, const char* modes, const char* data, const Cleanup cleanupcb);
-static void fundump(const char* filename,const char* modes, char* data, size_t n, const Cleanup cleanupcb);
+static char* hash(const char*, size_t, char*, size_t);
+static void fdump(const char* filename, const char* modes, const char* data, Cleanup cleanupcb);
+static void fundump(const char* filename, const char* modes, char* data, size_t n, Cleanup cleanupcb);
 static void newtf(Vault*);
 static void loadff(Vault*);
 
-/*
- * Global function declarations.
+/*************************************************************
+ * Global function declarations
+ *************************************************************
  */
-Vault vltinit(const char*);
+void vltinit(Vault*, const char*);
+bool vltadd(const Vault*, const char*);
 
-/*
- * Local function definitions.
+/*************************************************************
+ * Local function definitions
+ *************************************************************
  */
 static bool isprot(const char* name) {
     uint32_t i;
@@ -58,15 +70,18 @@ static bool isprot(const char* name) {
     return FALSE;
 }
 
+// Todo: impl
 static size_t keygen() {
     return 20lu;
 }
 
-static const char* hash(const char* data, size_t n) {
-    return data;
+// TODO: impl
+static char* hash(const char* str, size_t str_n, char* hash, size_t hash_n) {
+    strncpy(hash, str, str_n);
+    return hash;
 }
 
-static void fdump(const char* filename, const char* modes, const char* data, const Cleanup cleanupcb) {
+static void fdump(const char* filename, const char* modes, const char* data, Cleanup cleanupcb) {
     FILE* fptr;
     if ((fptr = fopen(filename, modes)) == NULL) {
         if (cleanupcb != NULL) cleanupcb();
@@ -79,7 +94,7 @@ static void fdump(const char* filename, const char* modes, const char* data, con
     fclose(fptr);
 }
 
-static void fundump(const char* filename, const char* modes, char* data, size_t n, const Cleanup cleanupcb) {
+static void fundump(const char* filename, const char* modes, char* data, size_t n, Cleanup cleanupcb) {
     FILE* fptr;
     if ((fptr = fopen(filename, modes)) == NULL) {
         if (cleanupcb != NULL) cleanupcb();
@@ -110,21 +125,21 @@ static void newtf(Vault* vlt) {
 
     // create _master-password path
     char masterpasswordpath[PATH_MAX_LENGTH];
-    topath(masterpasswordpath, masterpath, 1, "password.txt");
+    topath(masterpasswordpath, masterpath, 1, PASSWORD_FILE_NAME);
 
     // read master-password
     char masterpassword[PASSWORD_MAX_LENGTH];
     fprintf(stdout, "Select a Master Password: ");
     freadpw(masterpassword, PASSWORD_MAX_LENGTH);
-    fprintf(stdout, "\n");
 
     // hash and write _master-password to file (tmp unencrypted)
-    const char* masterpasswordhash = hash(masterpassword, HASH_MAX_LENGTH);
-    fdump(masterpasswordpath, "w", masterpasswordhash, NULL);
+    char masterpasswordhash[HASH_MAX_LENGTH];
+    hash(masterpassword, PASSWORD_MAX_LENGTH, masterpasswordhash, HASH_MAX_LENGTH);
+    fdump(masterpasswordpath, WRITE_MODE, masterpasswordhash, NULL);
 
     // create _master-key path
     char masterkeypath[PATH_MAX_LENGTH];
-    topath(masterkeypath, masterpath, 1, "key.txt");
+    topath(masterkeypath, masterpath, 1, KEY_FILE_NAME);
 
     // generate master-key
     uint64_t masterkey = keygen();
@@ -132,7 +147,7 @@ static void newtf(Vault* vlt) {
     // write _master-key to file (tmp unencrypted)
     char str[256];
     sprintf(str, "%zu", masterkey);
-    fdump(masterkeypath, "w", str, NULL);
+    fdump(masterkeypath, WRITE_MODE, str, NULL);
 
     // update vault struct
     vlt->key = VAULT_KEY;
@@ -152,7 +167,7 @@ static void loadff(Vault* vlt) {
 
     // create _master-password path
     char masterpasswordpath[PATH_MAX_LENGTH];
-    topath(masterpasswordpath, masterpath, 1, "password.txt");
+    topath(masterpasswordpath, masterpath, 1, PASSWORD_FILE_NAME);
 
     // check that _master-password exists
     if (fexists(masterpasswordpath) == FALSE) {
@@ -161,11 +176,11 @@ static void loadff(Vault* vlt) {
 
     // read master-password from file
     char masterpasswordhash[HASH_MAX_LENGTH];
-    fundump(masterpasswordpath, "r", masterpasswordhash, HASH_MAX_LENGTH, NULL);
+    fundump(masterpasswordpath, READ_MODE, masterpasswordhash, HASH_MAX_LENGTH, NULL);
 
     // create _master-key path
     char masterkeypath[PATH_MAX_LENGTH];
-    topath(masterkeypath, masterpath, 1, "key.txt");
+    topath(masterkeypath, masterpath, 1, KEY_FILE_NAME);
 
     // check that _master-key exists
     if (fexists(masterkeypath) == FALSE) {
@@ -174,7 +189,7 @@ static void loadff(Vault* vlt) {
 
     // read master-key from file
     char str[256];
-    fundump(masterkeypath, "r", str, 256, NULL);
+    fundump(masterkeypath, READ_MODE, str, 256, NULL);
     uint64_t masterkey = (uint64_t)atoll(str);
 
     // update vault struct
@@ -183,34 +198,27 @@ static void loadff(Vault* vlt) {
     vlt->masterkey = masterkey;
 }
 
-/*
- * Global function definitions.
+/*************************************************************
+ * Global function definitions
+ *************************************************************
  */
-Vault vltinit(const char* path) {
-    // create vault and vault dir path
-    Vault vlt;
-    char root[PATH_MAX_LENGTH];
-    topath(root, path, 1, VAULT_DIR_NAME);
-    strcpy(vlt.path, root);
+void vltinit(Vault* vlt, const char* path) {
+    // create top-level/root path
+    topath(vlt->path, path, 1, VAULT_DIR_NAME);
 
-    if (fexists(root) == TRUE) {
+    if (fexists(vlt->path) == TRUE) {
         // vault already exists
-        loadff(&vlt);
+        loadff(vlt);
     } else {
         // new vault should be created
-        newtf(&vlt);
+        newtf(vlt);
     }
-
-    return vlt;
 }
 
 bool vltadd(const Vault* vault, const char* name) {
     // check precondition
-    uint32_t i;
-    for (i = 0; i < NUM_PROTECTED_NAMES; ++i) {
-        if (strcmp(name, protectednames[i]) == 0) {
-            EXIT("Name: '%s' is protected\n", name);
-        }
+    if (isprot(name)) {
+        EXIT("Name: '%s' is protected\n", name);
     }
 
     // create name dir path
@@ -233,20 +241,19 @@ bool vltadd(const Vault* vault, const char* name) {
      * 2. auth using master-password
      */
 
-    // read password, and generate hash & key
+    // read password, and generate key
     char password[PASSWORD_MAX_LENGTH];
     fprintf(stdout, "Password: ");
     freadpw(password, PASSWORD_MAX_LENGTH);
-    fprintf(stdout, "\n");
-    const char* passwordhash = hash(password, HASH_MAX_LENGTH);
     uint64_t key = keygen();
-
+    
     // read master-password
+    // Todo: afford user n auth attempts
     char masterpassword[PASSWORD_MAX_LENGTH];
     fprintf(stdout, "Master-Password: ");
     freadpw(masterpassword, PASSWORD_MAX_LENGTH);
-    fprintf(stdout, "\n");
-    const char* masterpasswordhash = hash(masterpassword, HASH_MAX_LENGTH);
+    char masterpasswordhash[HASH_MAX_LENGTH];
+    hash(masterpassword, PASSWORD_MAX_LENGTH, masterpasswordhash, HASH_MAX_LENGTH);
 
     if (strcmp(vault->masterpasswordhash, masterpasswordhash) != 0) {
         EXIT("Could not authenticate using Master-Password\n", NULL);
@@ -254,19 +261,19 @@ bool vltadd(const Vault* vault, const char* name) {
 
     // create password path
     char passwordpath[PATH_MAX_LENGTH];
-    topath(passwordpath, namepath, 1, "password.txt");
+    topath(passwordpath, namepath, 1, PASSWORD_FILE_NAME);
 
     // write password to file
-    fdump(passwordpath, "w", passwordhash, NULL);
+    fdump(passwordpath, WRITE_MODE, password, NULL);
 
     // create key path
     char keypath[PATH_MAX_LENGTH];
-    topath(keypath, namepath, 1, "key.txt");
+    topath(keypath, namepath, 1, KEY_FILE_NAME);
 
     // write key to file
     char str[256];
     sprintf(str, "%zu", key);
-    fdump(keypath, "w", str, NULL);
+    fdump(keypath, WRITE_MODE, str, NULL);
 
     return TRUE;
 }
